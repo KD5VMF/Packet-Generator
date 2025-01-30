@@ -1,6 +1,4 @@
-from pathlib import Path
-
-Packet Generator (Enterprise)
+#Packet Generator (Enterprise)
 
 This repository contains an enterprise-level Packet Generator application designed with Python's Tkinter GUI framework. The program is a comprehensive packet generation and testing tool with features like persistent settings, lost-packet tracking, and network link monitoring.
 
