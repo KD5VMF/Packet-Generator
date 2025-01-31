@@ -552,6 +552,9 @@ class PacketGeneratorApp:
                     self.lost_packets = 0
                     consecutive_sent_without_loss = 0
 
+                # Schedule GUI update in the main thread
+                self.root.after(0, lambda: self.lost_packet_label.config(text=str(self.lost_packets)))
+
                 # Decrease PPS and packet size
                 current_pps = self.packets_per_second.get()
                 current_size = self.packet_size.get()
@@ -604,6 +607,9 @@ class PacketGeneratorApp:
             # Reset lost packets after each interval check
             with self.lock:
                 self.lost_packets = 0
+
+            # Schedule GUI update in the main thread
+            self.root.after(0, lambda: self.lost_packet_label.config(text=str(self.lost_packets)))
 
     def get_interface_status(self, interface):
         """Return True if interface is up, else False."""
@@ -1039,8 +1045,11 @@ class PacketGeneratorApp:
                 with self.lock:
                     self.lost_packets += gap
                 self.log(f"Detected {gap} lost packet(s).")
+                
+                # Schedule GUI update in the main thread
+                self.root.after(0, lambda: self.lost_packet_label.config(text=str(self.lost_packets)))
+                
             self.last_received_seq = seq
-            self.lost_packet_label.config(text=str(self.lost_packets))
 
         # Update the timestamp of the last received packet
         with self.lock:
