@@ -176,7 +176,4 @@ Special thanks to the open-source community for their contributions to networkin
 
 For questions or support, please contact:
 
-- **Author:** Your Name  
-- **Email:** your.email@example.com
-
-- **GitHub:** [YourUsername](https://github.com/yourusername)
+- **Author:** ChatGPT 4 & KD5VMF 
