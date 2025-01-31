@@ -1,6 +1,6 @@
 # Packet Generator (Enterprise Edition)
 
-Use PacGen30.py or The PacGen31 Exe for an easy run on Windows systems (01/31/2025)
+Use PacGen30.py or The PacGen31 Exe for an easy run. (01/31/2025)
 
 ## Overview
 The **Packet Generator (Enterprise Edition)** is a highly configurable, robust network packet generation tool with a feature-rich GUI built using **Tkinter**. Designed to meet enterprise-level demands, it supports persistent configurations, real-time speed monitoring, enhanced packet options, and an autotuning mechanism for dynamic performance adjustment.
