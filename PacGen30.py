@@ -42,7 +42,9 @@ class PacketGeneratorApp:
         self.error_count = 0
 
         # Lost-packet tracking
-        self.lost_packets = 0
+        # Use two counters: one cumulative (lost_packets_total) for display and one interval (lost_packets_interval) for autotuning.
+        self.lost_packets_total = 0
+        self.lost_packets_interval = 0
         self.last_received_seq = -1
 
         # Timestamp for last received packet
@@ -487,7 +489,10 @@ class PacketGeneratorApp:
             self.log("Autotune thread stopped.")
 
     def autotune_loop(self):
-        """Autotune loop that adjusts packet size and PPS based on packet loss and interface status."""
+        """
+        Autotune loop that adjusts packet size and PPS based on packet loss and interface status.
+        Runs only while sending is active.
+        """
         # Retrieve autotune settings
         interval = self.user_settings.get("autotune_interval", 5)  # seconds
         max_packs = self.user_settings.get("max_packs_per_sec", 5000)
@@ -501,23 +506,24 @@ class PacketGeneratorApp:
         packs_increment = self.user_settings.get("autotune_packs_increment", 50)    # Increase by 50 PPS
         size_increment = self.user_settings.get("autotune_size_increment", 500)   # Increase by 500 bytes
 
-        # Counters for tracking
+        # Counter for successful packets (for increasing PPS/size)
         consecutive_sent_without_loss = 0
         required_success_packets = 1000
 
         while self.autotune_running:
             time.sleep(interval)
 
+            # Only run autotune if we are actively sending
+            if not self.running:
+                continue
+
             with self.lock:
                 total_sent = self.packet_count
-                total_lost = self.lost_packets
-                last_received_time = self.last_packet_received_time
-
+                total_lost_interval = self.lost_packets_interval
             current_time = time.perf_counter()
-            time_since_last_packet = current_time - last_received_time
+            time_since_last_packet = current_time - self.last_packet_received_time
 
             # Define a threshold for considering no packets received as packet loss
-            # For example, twice the autotune interval
             no_packet_threshold = interval * 2
 
             # Determine interface status
@@ -533,29 +539,20 @@ class PacketGeneratorApp:
             packet_loss_detected = False
 
             if interface_down:
-                # If the interface is down, consider all sent packets as lost
-                with self.lock:
-                    self.lost_packets += total_sent
+                total_lost_interval = total_sent
                 packet_loss_detected = True
-                self.log(f"Autotune: Interface DOWN. Detected {total_sent} lost packet(s).")
+                self.log(f"Autotune: Interface DOWN. Detected {total_sent} lost packet(s) this interval.")
             elif time_since_last_packet > no_packet_threshold:
-                # If no packets received in the threshold time, consider it as packet loss
-                with self.lock:
-                    self.lost_packets += total_sent
+                total_lost_interval = total_sent
                 packet_loss_detected = True
-                self.log(f"Autotune: No packets received in the last {no_packet_threshold} seconds. Detected {total_sent} lost packet(s).")
+                self.log(f"Autotune: No packets received in the last {no_packet_threshold} seconds. Detected {total_sent} lost packet(s) this interval.")
 
-            if total_lost > 0 or packet_loss_detected:
-                # Reset counters
+            if total_lost_interval > 0 or packet_loss_detected:
                 with self.lock:
                     self.packet_count = 0
-                    self.lost_packets = 0
+                    self.lost_packets_interval = 0
                     consecutive_sent_without_loss = 0
 
-                # Schedule GUI update in the main thread
-                self.root.after(0, lambda: self.lost_packet_label.config(text=str(self.lost_packets)))
-
-                # Decrease PPS and packet size
                 current_pps = self.packets_per_second.get()
                 current_size = self.packet_size.get()
 
@@ -574,18 +571,14 @@ class PacketGeneratorApp:
                 else:
                     self.log("Autotune: Packet size already at minimum limit.")
             else:
-                # No packet loss detected
                 with self.lock:
                     consecutive_sent_without_loss += total_sent
-                    self.packet_count = 0  # Reset sent count after checking
+                    self.packet_count = 0
 
                 self.log(f"Autotune: {consecutive_sent_without_loss} consecutive packets sent without loss.")
 
                 if consecutive_sent_without_loss >= required_success_packets:
-                    # Reset the counter
                     consecutive_sent_without_loss = 0
-
-                    # Increase PPS and packet size
                     current_pps = self.packets_per_second.get()
                     current_size = self.packet_size.get()
 
@@ -604,12 +597,7 @@ class PacketGeneratorApp:
                     else:
                         self.log("Autotune: Packet size already at maximum limit.")
 
-            # Reset lost packets after each interval check
-            with self.lock:
-                self.lost_packets = 0
-
-            # Schedule GUI update in the main thread
-            self.root.after(0, lambda: self.lost_packet_label.config(text=str(self.lost_packets)))
+            self.root.after(0, lambda: self.lost_packet_label.config(text=str(self.lost_packets_total)))
 
     def get_interface_status(self, interface):
         """Return True if interface is up, else False."""
@@ -824,8 +812,10 @@ class PacketGeneratorApp:
             self.packet_count = 0
             self.received_packet_count = 0
             self.error_count = 0
-            self.lost_packets = 0
+            self.lost_packets_total = 0
+            self.lost_packets_interval = 0
             self.last_packet_received_time = time.perf_counter()
+            self.last_received_seq = -1  # Reset the last received sequence number
 
         self.bytes_sent_last_interval = 0  # Reset speed tracking
 
@@ -908,20 +898,16 @@ class PacketGeneratorApp:
                         self.bytes_sent_last_interval += bytes_sent
                         current_count = self.packet_count
 
-                    # Update sent packet label in the main thread
                     self.root.after(0, lambda count=current_count: self.sent_packet_label.config(text=str(count)))
 
-                    # Log every packet if verbose, else every 100th
                     if self.var_verbose.get():
                         self.log(f"Sent packet #{current_count} ({bytes_sent} bytes).")
                     else:
                         if current_count % 100 == 0:
                             self.log(f"Sent packet #{current_count} ({bytes_sent} bytes).")
 
-                    # Indicate activity (optional: you can add separate indicators)
                     self.blink_activity_indicator()
 
-                    # Handle max packets
                     if max_pkts > 0 and self.packet_count >= max_pkts:
                         self.log(f"Reached total send stop point ({max_pkts} packets). Stopping...")
                         self.root.after(0, self.stop_sending)
@@ -937,10 +923,8 @@ class PacketGeneratorApp:
                     self.root.after(0, self.stop_sending)
                     break
 
-                # Schedule next send
                 next_send_time += interval
             else:
-                # Sleep for the remaining time
                 time_to_sleep = next_send_time - current_time
                 if time_to_sleep > 0:
                     time.sleep(time_to_sleep)
@@ -957,49 +941,33 @@ class PacketGeneratorApp:
             self.log(f"WARNING: Packet size {user_size} exceeds 65507. Clamping.")
             user_size = 65507
 
-        # Base header = 4-byte seq
         seq_header = struct.pack("I", seq_number)
 
-        # Initialize body
         body = b""
 
-        # Conditional optional data
-        # 1) Protocol Version
         if self.var_protocol_version.get():
             protocol_version = b"Protocol-Version:1.0;"
             body += protocol_version
 
-        # 2) Source MAC Address
         if self.var_source_mac.get():
             source_mac = self.get_source_mac()
             body += f"Source-MAC:{source_mac};".encode("utf-8")
 
-        # 3) Unique Identifier
         if self.var_unique_id.get():
             unique_id = str(uuid.uuid4())
             body += f"UUID:{unique_id};".encode("utf-8")
 
-        # 4) Payload Signature
         if self.var_payload_signature.get():
-            # For simplicity, we'll create a CRC32 hash of the current body
             checksum = zlib.crc32(body) & 0xFFFFFFFF
             payload_signature = f"Payload-CRC32:{checksum};".encode("utf-8")
             body += payload_signature
 
-        # Calculate remaining bytes after overhead and optional fields
         overhead = 4 + len(body) + 4  # seq + body + CRC32
         remaining_size = max(0, user_size - overhead)
-
-        # Fill the remaining size with 'X'
         body += b"X" * remaining_size
 
-        # Combine sequence header and body
         full_payload = seq_header + body
-
-        # Compute CRC32
         chksum = struct.pack("I", zlib.crc32(full_payload) & 0xFFFFFFFF)
-
-        # Final packet
         packet = full_payload + chksum
         return packet
 
@@ -1014,11 +982,10 @@ class PacketGeneratorApp:
                     mac = addr.address
                     break
             if mac:
-                # Format MAC address
                 mac_formatted = mac.upper().replace(":", "-")
                 return mac_formatted
             else:
-                return "00-00-00-00-00-00"  # Default MAC if not found
+                return "00-00-00-00-00-00"
         except Exception as e:
             self.log(f"Error retrieving source MAC address: {e}")
             return "00-00-00-00-00-00"
@@ -1043,15 +1010,12 @@ class PacketGeneratorApp:
             gap = seq - (self.last_received_seq + 1)
             if gap > 0:
                 with self.lock:
-                    self.lost_packets += gap
+                    self.lost_packets_total += gap
+                    self.lost_packets_interval += gap
                 self.log(f"Detected {gap} lost packet(s).")
-                
-                # Schedule GUI update in the main thread
-                self.root.after(0, lambda: self.lost_packet_label.config(text=str(self.lost_packets)))
-                
+                self.root.after(0, lambda: self.lost_packet_label.config(text=str(self.lost_packets_total)))
             self.last_received_seq = seq
 
-        # Update the timestamp of the last received packet
         with self.lock:
             self.last_packet_received_time = time.perf_counter()
 
@@ -1082,8 +1046,6 @@ class PacketGeneratorApp:
 
             self.recv_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self.recv_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            
-            # Increase the receive buffer size (e.g., to 1MB)
             self.recv_sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 1048576)
 
             actual_buffer_size = self.recv_sock.getsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF)
@@ -1109,7 +1071,6 @@ class PacketGeneratorApp:
                     self.error_label.config(text=str(self.error_count))
                     continue
 
-                # If packet verifies, increment received
                 if self.verify_packet(data):
                     with self.lock:
                         self.received_packet_count += 1
@@ -1121,7 +1082,6 @@ class PacketGeneratorApp:
                         current_error = self.error_count
                     self.root.after(0, lambda error=current_error: self.error_label.config(text=str(error)))
 
-                # Indicate activity (optional: you can add separate indicators)
                 self.blink_activity_indicator()
 
         except Exception as e:
@@ -1129,9 +1089,6 @@ class PacketGeneratorApp:
 
     def blink_activity_indicator(self):
         """Blink the activity indicator without affecting the link LEDs."""
-        # Implement separate indicators if desired
-        # For example, you can flash the status text or use additional LEDs
-        # Here, we'll flash the status text to indicate activity
         original_text = self.status_text.get()
         self.status_text.set("Activity Detected")
         self.root.after(100, lambda: self.status_text.set(original_text))
@@ -1141,8 +1098,6 @@ class PacketGeneratorApp:
         iface_name = None
         if port_var.get():
             iface_name = port_var.get().split(" - ")[0]
-
-        # Set to yellow to indicate activity
         canvas.config(bg="yellow")
         self.root.after(100, lambda: self.update_leds(canvas, self.get_interface_status(iface_name)))
 
@@ -1162,26 +1117,22 @@ class PacketGeneratorApp:
         with self.lock:
             bytes_sent = self.bytes_sent_last_interval
             bits_sent = bytes_sent * 8
-            self.bytes_sent_last_interval = 0  # Reset the counter
+            self.bytes_sent_last_interval = 0
 
-        # Convert bytes to KB/s or MB/s
         speed_kb = bytes_sent / 1024
         if speed_kb < 1024:
-            speed_mbps = bits_sent / (1000 * 1000)  # Mbps
+            speed_mbps = bits_sent / (1000 * 1000)
             speed_str = f"{speed_kb:.2f} KB/s | {speed_mbps:.2f} Mbps"
         else:
             speed_mb = speed_kb / 1024
-            speed_mbps = bits_sent / (1000 * 1000)  # Mbps
+            speed_mbps = bits_sent / (1000 * 1000)
             speed_str = f"{speed_mb:.2f} MB/s | {speed_mbps:.2f} Mbps"
 
         self.current_speed_label.config(text=speed_str)
-
-        # Schedule the next speed update after 1 second
         self.root.after(1000, self.update_speed)
 
 # Entry point
 if __name__ == "__main__":
-    # Check if psutil is installed
     try:
         import psutil
     except ImportError:
@@ -1190,7 +1141,6 @@ if __name__ == "__main__":
         sys.exit(1)
 
     root = tk.Tk()
-    # Allow window to be resizable
     root.resizable(True, True)
     app = PacketGeneratorApp(root)
     root.mainloop()
