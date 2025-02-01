@@ -782,7 +782,6 @@ class PacketGeneratorApp:
         self.debug_text.config(state="normal")
         self.debug_text.delete("1.0", tk.END)
         self.debug_text.config(state="disabled")
-        # Also clear graph data
         self.graph_times.clear()
         self.graph_data.clear()
 
@@ -821,7 +820,9 @@ class PacketGeneratorApp:
             self.enable_widgets()
             self.stop_button.config(state="disabled")
             return
-        self.sending_thread = threading.Thread(target=self.packet_sending_worker, args=(target_ip, target_port, pps, max_pkts), daemon=True)
+        self.sending_thread = threading.Thread(target=self.packet_sending_worker,
+                                               args=(target_ip, target_port, pps, max_pkts),
+                                               daemon=True)
         self.sending_thread.start()
         self.log("Packet sending thread started.")
 
@@ -838,7 +839,9 @@ class PacketGeneratorApp:
                         self.packet_count += 1
                         self.bytes_sent_last_interval += bytes_sent
                         current_count = self.packet_count
-                    # Create a packet preview (first 50 bytes, as hex)
+                    # Update sent packet count immediately
+                    self.root.after(0, lambda count=current_count: self.sent_packet_label.config(text=str(count)))
+                    # Create a packet preview (first 50 bytes as hex)
                     packet_preview = packet[:50]
                     packet_preview_hex = packet_preview.hex()
                     if self.var_verbose.get():
