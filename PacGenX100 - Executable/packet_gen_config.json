@@ -1,0 +1,21 @@
+{
+  "target_port": 12345,
+  "packet_size": 32768,
+  "packets_per_second": 1000,
+  "max_packets": 1000,
+  "use_handshake": true,
+  "use_start_delay": true,
+  "use_verbose": true,
+  "add_protocol_version": true,
+  "add_source_mac": true,
+  "add_unique_id": true,
+  "add_payload_signature": true,
+  "max_packet_size": 65507,
+  "min_packet_size": 4000,
+  "max_packs_per_sec": 4000,
+  "min_packs_per_sec": 1,
+  "nic_A": "Ethernet - 192.168.50.1",
+  "nic_B": "Ethernet 2 - 192.168.50.2",
+  "nic_C": "Ethernet 3 - 192.168.50.3",
+  "nic_D": "Ethernet 4 - 192.168.50.4"
+}
