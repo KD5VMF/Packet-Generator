@@ -16,7 +16,7 @@ that the physical interface is used. With this update, if the cable is unplugged
 the sender will not loop back the packets internally but will instead update the
 lost-packet counters and wait for the cable to be reconnected before resuming.
 
-Author: Your Name
+Author: Chat-GPT o3-mini-high
 Date: 2025-02-08
 """
 
