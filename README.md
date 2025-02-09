@@ -1,7 +1,7 @@
 
 # Enterprise Packet Generator (Enterprise Professional Edition)
 
-![Enterprise Packet Generator](https://via.placeholder.com/600x200?text=Enterprise+Packet+Generator+Logo)
+
 
 ## Overview
 
@@ -25,9 +25,6 @@ With support for multiple TX/RX ports, detailed performance monitoring, and conf
 
 ---
 
-## Screenshot
-
-![GUI Screenshot](https://via.placeholder.com/800x450?text=GUI+Screenshot)
 
 ---
 
