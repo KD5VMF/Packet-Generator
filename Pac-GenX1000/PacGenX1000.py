@@ -91,8 +91,8 @@ class PacketGeneratorApp:
             "add_unique_id": False,
             "add_payload_signature": False,
             "max_packet_size": MAX_UDP_PAYLOAD,
-            "min_packet_size": 4000,
-            "max_packs_per_sec": 4000,
+            "min_packet_size": 40,
+            "max_packs_per_sec": 5000,
             "min_packs_per_sec": 1
         }
         self.user_settings = self.load_config()
