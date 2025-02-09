@@ -1,181 +1,125 @@
-# Packet Generator (Enterprise Edition)
 
-Use PacGen35.py or The PacGen32 ZIP file for an easy run, but older version. (01/31/2025)
+# Enterprise Packet Generator (Enterprise Professional Edition)
 
-Rev update: PacGen38.py Has many updates including a live Graph!
+![Enterprise Packet Generator](https://via.placeholder.com/600x200?text=Enterprise+Packet+Generator+Logo)
 
 ## Overview
-The **Packet Generator (Enterprise Edition)** is a highly configurable, robust network packet generation tool with a feature-rich GUI built using **Tkinter**. Designed to meet enterprise-level demands, it supports persistent configurations, real-time speed monitoring, enhanced packet options, and an autotuning mechanism for dynamic performance adjustment.
+
+The **Enterprise Packet Generator (Enterprise Professional Edition)** is a work-in-progress Python application designed to generate high-performance network traffic over **UDP** or **TCP**. This application provides features such as sequence tracking, HMAC-based payload authentication, CRC validation, and complete customization of packet headers and payloads. It is intended for testing network infrastructure under controlled, reproducible traffic conditions.
+
+With support for multiple TX/RX ports, detailed performance monitoring, and configurable features, the tool is ideal for benchmarking, reliability testing, and identifying potential bottlenecks in network environments.
 
 ---
 
-## Key Features
+## Features
 
-- **Graphical User Interface (GUI):** Built using Tkinter with resizable, interactive widgets.
-- **Real-time speed monitoring:** Displays network speed in KB/s, MB/s, and Mbps.
-- **Persistent Configuration:** Automatically saves and loads settings using a JSON configuration file.
-- **Enhanced Packet Customization:** Optional protocol versioning, source MAC address, unique packet IDs, and payload signatures.
-- **Autotune Feature:** Automatically adjusts packet size and packets per second (PPS) to maintain optimal performance.
-- **Lost Packet Detection:** Tracks lost packets using sequence numbers.
-- **Handshake Support:** Optional initial handshake to ensure reliable communication.
-- **Link LED Indicators:** Monitors source and destination link status with real-time updates.
-- **Multi-threaded Design:** Background threads for packet sending, receiving, and autotuning.
+- **Protocols:** Choose between UDP or TCP for packet transmission.
+- **Sequence Tracking:** Packets include 4-byte sequence headers for proper ordering.
+- **HMAC and CRC:** Optionally add HMAC signatures for payload authentication and CRC32 checksum verification.
+- **Multiple Ports:** Supports 4 configurable network ports for TX/RX.
+- **Physical Interface Binding:** Binds to physical interfaces using `SO_BINDTODEVICE` (Linux) or `SO_DONTROUTE` (Windows).
+- **Customizable Packet Structure:** Include protocol version, source MAC address, UUID, and more in packet headers.
+- **GUI Interface:** Easy-to-use graphical user interface built with **Tkinter**.
+- **Live Performance Monitoring:** Instantaneous and average speed metrics displayed in real time.
+- **Configurable:** Save and load configuration settings using JSON.
 
 ---
 
-## Requirements
+## Screenshot
 
-- **Python 3.8+**
-- **Tkinter** (included with most Python installations)
-- **Psutil** library for network interface detection
+![GUI Screenshot](https://via.placeholder.com/800x450?text=GUI+Screenshot)
 
-You can install `psutil` using:
+---
 
+## Installation
+
+### Prerequisites
+- **Python 3.7+**
+- **psutil**
+  
+  Install using:
+  ```bash
+  pip install psutil
+  ```
+
+### Clone the Repository
 ```bash
-pip install psutil
+git clone https://github.com/your-username/enterprise-packet-generator.git
+cd enterprise-packet-generator
+```
+
+### Run the Application
+```bash
+python3 packet_generator.py
 ```
 
 ---
 
-## Installation and Setup
+## Configuration
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/packet-generator-enterprise.git
-   cd packet-generator-enterprise
-   ```
-
-2. Install dependencies:
-   ```bash
-   pip install -r requirements.txt  # Include psutil as a dependency
-   ```
-
-3. Run the application:
-   ```bash
-   python packet_generator.py
-   ```
+Settings are saved in `packet_gen_config.json`. The GUI allows on-the-fly modifications to:
+- Target port
+- Packet size
+- Packets per second
+- Maximum packets to send
+- Protocol selection (UDP/TCP)
+- Advanced options such as HMAC, CRC, MAC address inclusion, and more.
 
 ---
 
-## Application Layout
+## Usage
 
-- **Network Configuration:** Select source and destination network interfaces.
-- **Target Configuration:** Specify the target IP address and port.
-- **Packet Settings:** Configure packet size, packets per second, and maximum packets.
-- **Enhanced Features:** Enable/disable optional protocol enhancements.
-- **Autotune:** Enable dynamic performance tuning.
-- **Link Status LEDs:** Monitor real-time link status.
-- **Debug Log:** View system events, logs, and errors.
+1. **Start the Application:** Launch using the command mentioned in the installation section.
+2. **Configure Ports:** Select TX/RX interfaces for UDP/TCP communication.
+3. **Set Parameters:** Adjust packet size, speed, and header options.
+4. **Monitor:** Track live performance metrics including packet loss, errors, and speed.
+5. **Stop/Reset:** Stop the current session and reset counters for a new test.
 
 ---
 
-## Usage Instructions
+## Important Notes
 
-1. Launch the application using the command:
-   ```bash
-   python packet_generator.py
-   ```
-
-2. Configure the **Network Settings**:
-   - Select source and destination network interfaces from the dropdown.
-   - Set the target IP and port.
-
-3. Adjust **Packet Settings**:
-   - Define the packet size and packets per second.
-   - Optionally, set a maximum packet limit (0 for unlimited).
-
-4. Customize the **Enhanced Features**:
-   - Enable options like protocol versioning, source MAC, and unique packet IDs.
-
-5. Enable or disable **Autotune**:
-   - If enabled, the tool dynamically adjusts packet size and PPS based on performance.
-
-6. Click **Start** to begin sending packets and **Stop** to end the process.
+- This tool is intended for advanced users and professionals conducting network tests.
+- Ensure the correct physical network interfaces are selected to observe packet behavior accurately.
 
 ---
 
-## Autotune Mechanism
+## Authors and Acknowledgments
 
-The autotune feature dynamically adjusts packet size and packets per second (PPS) based on network conditions:
+This project is a work in progress developed with contributions from **Adam Figueroa** and guidance from **Chat-GPT**.
 
-- **Increase PPS/Size:** When no packet loss is detected for a set threshold.
-- **Decrease PPS/Size:** When packet loss or network errors are detected.
-
----
-
-## Configuration File
-
-The application saves settings in a JSON configuration file named `packet_gen_config.json` located in the project directory. Upon startup, it loads these settings automatically.
-
-**Sample Configuration:**
-```json
-{
-  "source_port": "",
-  "destination_port": "",
-  "target_ip": "",
-  "target_port": 12345,
-  "packet_size": 32768,
-  "packets_per_second": 1000,
-  "max_packets": 0,
-  "use_handshake": false,
-  "use_start_delay": false,
-  "use_verbose": false,
-  "add_protocol_version": false,
-  "add_source_mac": false,
-  "add_unique_id": false,
-  "add_payload_signature": false,
-  "autotune_enabled": true,
-  "autotune_interval": 5,
-  "autotune_packs_increment": 50,
-  "autotune_packs_decrement": 50,
-  "autotune_size_increment": 500,
-  "autotune_size_decrement": 500,
-  "max_packet_size": 32768,
-  "max_packs_per_sec": 5000,
-  "min_packs_per_sec": 50,
-  "min_packet_size": 5000
-}
-```
+We are actively working on expanding the tool's capabilities and addressing any issues reported by users. If you encounter problems or have suggestions, feel free to open an issue on GitHub.
 
 ---
 
-## Development and Contribution
+## Roadmap
 
-We welcome contributions to enhance the Packet Generator further! To contribute:
-
-1. Fork the repository.
-2. Create a new branch.
-3. Commit your changes.
-4. Submit a pull request.
+Planned features include:
+- Expanded protocol support (e.g., ICMP, custom protocols)
+- Enhanced latency measurement and reporting
+- Automated stress testing scripts
+- Support for distributed deployments
 
 ---
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the [MIT License](LICENSE).
 
 ---
 
-## Troubleshooting
+## Contributing
 
-- **Error: The 'psutil' library is required but not installed:**
-  - Install it using `pip install psutil`.
-- **Link LED not updating:**
-  - Ensure the selected network interfaces are active and properly configured.
-- **Packet loss detected:**
-  - Try enabling the autotune feature to dynamically adjust performance.
-
+Contributions are welcome! Please fork the repository and submit a pull request.
 
 ---
 
-## Acknowledgments
+## Disclaimer
 
-Special thanks to the open-source community for their contributions to networking libraries and frameworks.
+This tool is for testing purposes only. Improper use may cause network congestion or other issues. Please use responsibly.
 
 ---
 
-## Contact
+## Download
 
-For questions or support, please contact:
-
-- **Author:** ChatGPT 4 & KD5VMF 
+You can download this README file directly: [README.md](./README.md)
